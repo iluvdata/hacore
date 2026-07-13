@@ -28,12 +28,12 @@ class RestData:
         self,
         hass: HomeAssistant,
         method: str,
-        resource: str,
+        resource: template.Template,
         encoding: str,
         auth: aiohttp.DigestAuthMiddleware | aiohttp.BasicAuth | tuple[str, str] | None,
         headers: dict[str, str] | None,
         params: dict[str, str] | None,
-        data: str | None,
+        data: template.Template | None,
         verify_ssl: bool,
         ssl_cipher_list: str,
         timeout: int = DEFAULT_TIMEOUT,
@@ -64,18 +64,10 @@ class RestData:
         self.last_exception: Exception | None = None
         self.headers: CIMultiDictProxy[str] | None = None
 
-    def set_payload(self, payload: str) -> None:
-        """Set request data."""
-        self._request_data = payload
-
     @property
-    def url(self) -> str:
+    def url(self) -> Any:
         """Get url."""
-        return self._resource
-
-    def set_url(self, url: str) -> None:
-        """Set url."""
-        self._resource = url
+        return self._resource.async_render(parse_result=False)
 
     def _is_expected_content_type(self, content_type: str) -> bool:
         """Check if the content type is one we expect (JSON or XML)."""
@@ -145,12 +137,18 @@ class RestData:
 
         # Handle data/content
         if self._request_data:
-            request_kwargs["data"] = self._request_data
+            request_kwargs["data"] = (
+                self._request_data.async_render(parse_result=False)
+                if self._request_data is not None
+                else None
+            )
         response = None
         try:
             # Make the request
             async with self._session.request(
-                self._method, self._resource, **request_kwargs
+                self._method,
+                self._resource.async_render(parse_result=False),
+                **request_kwargs,
             ) as response:
                 # Read the response
                 # Only use configured encoding if no charset in Content-Type header

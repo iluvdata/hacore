@@ -13,6 +13,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
 )
 from homeassistant.components.rest import DOMAIN
+from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.const import (
     ATTR_DEVICE_CLASS,
     ATTR_ENTITY_ID,
@@ -25,6 +26,8 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.setup import async_setup_component
+
+from .common import setup_config_entry
 
 from tests.common import get_fixture_path
 from tests.test_util.aiohttp import AiohttpClientMocker
@@ -673,30 +676,36 @@ async def test_setup_get_basic_auth_utf8(
     hass: HomeAssistant, aioclient_mock: AiohttpClientMocker
 ) -> None:
     """Test setup with basic auth using UTF-8 characters."""
+
     # Use a password with the Unicode character \u2018 (left single quotation mark)
     aioclient_mock.get("http://localhost", status=HTTPStatus.OK, json={"key": "on"})
-    assert await async_setup_component(
+    assert await setup_config_entry(
         hass,
-        BINARY_SENSOR_DOMAIN,
         {
-            BINARY_SENSOR_DOMAIN: {
-                "platform": DOMAIN,
-                "resource": "http://localhost",
-                "method": "GET",
-                "value_template": "{{ value_json.key }}",
-                "name": "foo",
-                "verify_ssl": "true",
-                "timeout": 30,
-                "authentication": "basic",
-                "username": "test_user",
-                "password": "test\u2018password",  # Password with Unicode char
-                "headers": {"Accept": CONTENT_TYPE_JSON},
-            }
+            "resource": "http://localhost",
+            "method": "GET",
+            "name": "foo",
+            "verify_ssl": "true",
+            "timeout": 30,
+            "authentication": "basic",
+            "username": "test_user",
+            "password": "test\u2018password",  # Password with Unicode char
+            "headers": {"Accept": CONTENT_TYPE_JSON},
         },
+        [
+            ConfigSubentryData(
+                title="bar",
+                unique_id="bar_unique_id",
+                subentry_type=BINARY_SENSOR_DOMAIN,
+                data={
+                    "name": "bar",
+                    "value_template": "{{ value_json.key }}",
+                },
+            )
+        ],
     )
 
-    await hass.async_block_till_done()
     assert len(hass.states.async_all(BINARY_SENSOR_DOMAIN)) == 1
 
-    state = hass.states.get("binary_sensor.foo")
+    state = hass.states.get("binary_sensor.bar")
     assert state.state == STATE_ON

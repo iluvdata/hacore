@@ -1,118 +1,55 @@
 """Support for RESTful API sensors."""
 
+from collections.abc import Mapping
 import logging
-import ssl
 from typing import Any, override
 from xml.parsers.expat import ExpatError
 
-import voluptuous as vol
+from jsonpath import ExprSyntaxError, JSONPathTypeError, search
 
-from homeassistant.components.sensor import (
-    CONF_STATE_CLASS,
-    DOMAIN as SENSOR_DOMAIN,
-    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
-)
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import (
-    CONF_DEVICE_CLASS,
     CONF_FORCE_UPDATE,
-    CONF_ICON,
-    CONF_NAME,
-    CONF_RESOURCE,
     CONF_RESOURCE_TEMPLATE,
-    CONF_UNIQUE_ID,
-    CONF_UNIT_OF_MEASUREMENT,
     CONF_VALUE_TEMPLATE,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import PlatformNotReady
-from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.template import Template
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.trigger_template_entity import (
-    CONF_AVAILABILITY,
-    CONF_PICTURE,
     ManualTriggerSensorEntity,
     ValueTemplate,
 )
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.util.json import json_loads
 
-from . import async_get_config_and_coordinator, create_rest_data_from_config
+from . import RestConfigEntry
 from .const import CONF_JSON_ATTRS, CONF_JSON_ATTRS_PATH, DEFAULT_SENSOR_NAME
 from .data import RestData
-from .entity import RestEntity
-from .schema import RESOURCE_SCHEMA, SENSOR_SCHEMA
-from .util import parse_json_attributes
+from .entity import RestEntity, async_get_trigger_entity_config
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = vol.All(
-    SENSOR_PLATFORM_SCHEMA.extend({**RESOURCE_SCHEMA, **SENSOR_SCHEMA}),
-    cv.has_at_least_one_key(CONF_RESOURCE, CONF_RESOURCE_TEMPLATE),
-)
 
-TRIGGER_ENTITY_OPTIONS = (
-    CONF_AVAILABILITY,
-    CONF_DEVICE_CLASS,
-    CONF_ICON,
-    CONF_PICTURE,
-    CONF_UNIQUE_ID,
-    CONF_STATE_CLASS,
-    CONF_UNIT_OF_MEASUREMENT,
-)
-
-
-async def async_setup_platform(
+async def async_setup_entry(
     hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
+    config_entry: RestConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Set up the RESTful sensor."""
-    # Must update the sensor now (including fetching the rest resource) to
-    # ensure it's updating its state.
-    if discovery_info is not None:
-        conf, coordinator, rest = await async_get_config_and_coordinator(
-            hass, SENSOR_DOMAIN, discovery_info
-        )
-    else:
-        conf = config
-        coordinator = None
-        rest = create_rest_data_from_config(hass, conf)
-        await rest.async_update(log_errors=False)
+    """Setup the RESTful binary sensors."""
 
-    if rest.data is None:
-        if rest.last_exception:
-            if isinstance(rest.last_exception, ssl.SSLError):
-                _LOGGER.error(
-                    "Error connecting %s failed with %s",
-                    rest.url,
-                    rest.last_exception,
-                )
-                return
-            raise PlatformNotReady from rest.last_exception
-        raise PlatformNotReady
-
-    name = conf.get(CONF_NAME) or Template(DEFAULT_SENSOR_NAME, hass)
-
-    trigger_entity_config = {CONF_NAME: name}
-
-    for key in TRIGGER_ENTITY_OPTIONS:
-        if key not in conf:
-            continue
-        trigger_entity_config[key] = conf[key]
-
-    async_add_entities(
-        [
-            RestSensor(
-                hass,
-                coordinator,
-                rest,
-                conf,
-                trigger_entity_config,
+    for subentry_id, subentry in config_entry.subentries.items():
+        if subentry.subentry_type == SENSOR_DOMAIN:
+            async_add_entities(
+                [
+                    RestSensor(
+                        hass,
+                        config_entry.runtime_data.coordinator,
+                        config_entry.runtime_data.rest,
+                        subentry.data,
+                    )
+                ],
+                config_subentry_id=subentry_id,
             )
-        ],
-    )
 
 
 class RestSensor(ManualTriggerSensorEntity, RestEntity):
@@ -123,11 +60,14 @@ class RestSensor(ManualTriggerSensorEntity, RestEntity):
         hass: HomeAssistant,
         coordinator: DataUpdateCoordinator[None] | None,
         rest: RestData,
-        config: ConfigType,
-        trigger_entity_config: ConfigType,
+        config: Mapping[str, Any],
     ) -> None:
         """Initialize the REST sensor."""
-        ManualTriggerSensorEntity.__init__(self, hass, trigger_entity_config)
+        ManualTriggerSensorEntity.__init__(
+            self,
+            hass,
+            async_get_trigger_entity_config(hass, rest, config, DEFAULT_SENSOR_NAME),
+        )
         RestEntity.__init__(
             self,
             coordinator,
@@ -155,7 +95,7 @@ class RestSensor(ManualTriggerSensorEntity, RestEntity):
         return dict(self._attr_extra_state_attributes)
 
     @override
-    def _update_from_rest_data(self) -> None:
+    def update_from_rest_data(self) -> None:
         """Update state from the rest data."""
         try:
             value = self.rest.data_without_xml()
@@ -171,7 +111,7 @@ class RestSensor(ManualTriggerSensorEntity, RestEntity):
             return
 
         if self._json_attrs:
-            self._attr_extra_state_attributes = parse_json_attributes(
+            self._attr_extra_state_attributes = _parse_json_attributes(
                 value, self._json_attrs, self._json_attrs_path
             )
 
@@ -183,3 +123,30 @@ class RestSensor(ManualTriggerSensorEntity, RestEntity):
         self._set_native_value_with_possible_timestamp(value)
         self._process_manual_data(variables)
         self.async_write_ha_state()
+
+
+def _parse_json_attributes(
+    value: str | None, json_attrs: list[str], json_attrs_path: str | None
+) -> dict[str, Any]:
+    """Parse JSON attributes."""
+    if not value:
+        _LOGGER.warning("Empty reply found when expecting JSON data")
+        return {}
+
+    try:
+        json_dict = json_loads(value)
+        if json_attrs_path is not None:
+            json_dict = search(json_attrs_path, json_dict)
+        if isinstance(json_dict, list) and json_dict:
+            json_dict = json_dict[0]
+        if isinstance(json_dict, dict):
+            return {k: json_dict[k] for k in json_attrs if k in json_dict}
+
+        _LOGGER.warning(
+            "JSON result was not a dictionary or list with 0th element a dictionary"
+        )
+    except ValueError, TypeError, ExprSyntaxError, JSONPathTypeError:
+        _LOGGER.warning("REST result could not be parsed as JSON")
+        _LOGGER.debug("Erroneous JSON: %s", value)
+
+    return {}

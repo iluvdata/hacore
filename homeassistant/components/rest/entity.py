@@ -1,14 +1,65 @@
 """The base entity for the rest component."""
 
 from abc import abstractmethod
+from collections.abc import Mapping
+import logging
+from ssl import SSLError
 from typing import Any, override
 
-from homeassistant.core import callback
+from homeassistant.components.sensor import CONF_STATE_CLASS
+from homeassistant.const import (
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_NAME,
+    CONF_UNIT_OF_MEASUREMENT,
+)
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.template import Template
+from homeassistant.helpers.trigger_template_entity import (
+    CONF_AVAILABILITY,
+    CONF_PICTURE,
+)
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
 from .data import RestData
+
+_LOGGER = logging.getLogger(__name__)
+
+TRIGGER_ENTITY_OPTIONS = (
+    CONF_AVAILABILITY,
+    CONF_DEVICE_CLASS,
+    CONF_ICON,
+    CONF_PICTURE,
+    # For sensor entities, will not be in binary_sensor config
+    CONF_STATE_CLASS,
+    CONF_UNIT_OF_MEASUREMENT,
+)
+
+
+@callback
+def async_get_trigger_entity_config(
+    hass: HomeAssistant, rest: RestData, config: Mapping[str, Any], default_name: str
+) -> ConfigType:
+    """Generate the trigger entity config.
+
+    For `RestEntity` subclasses that also subclass `ManualTriggerEntity`
+    """
+    name = Template(
+        config.get(CONF_NAME, default_name),
+        hass,
+    )
+
+    trigger_entity_config: ConfigType = {CONF_NAME: name}
+
+    for key in TRIGGER_ENTITY_OPTIONS:
+        if key not in config:
+            continue
+        trigger_entity_config[key] = config[key]
+
+    return trigger_entity_config
 
 
 class RestEntity(Entity):
@@ -16,12 +67,23 @@ class RestEntity(Entity):
 
     def __init__(
         self,
-        coordinator: DataUpdateCoordinator[Any] | None,
+        coordinator: DataUpdateCoordinator[None] | None,
         rest: RestData,
         resource_template: Template | None,
         force_update: bool,
     ) -> None:
         """Create the entity that may have a coordinator."""
+        if rest.data is None:
+            if rest.last_exception:
+                if isinstance(rest.last_exception, SSLError):
+                    _LOGGER.error(
+                        "Error connecting %s failed with %s",
+                        rest.url,
+                        rest.last_exception,
+                    )
+                    return
+                raise HomeAssistantError from rest.last_exception
+            raise HomeAssistantError
         self._coordinator = coordinator
         self.rest = rest
         self._resource_template = resource_template
@@ -40,7 +102,7 @@ class RestEntity(Entity):
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
         await super().async_added_to_hass()
-        self._update_from_rest_data()
+        self.update_from_rest_data()
         if self._coordinator:
             self.async_on_remove(
                 self._coordinator.async_add_listener(self._handle_coordinator_update)
@@ -49,7 +111,7 @@ class RestEntity(Entity):
     @callback
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        self._update_from_rest_data()
+        self.update_from_rest_data()
         self.async_write_ha_state()
 
     async def async_update(self) -> None:
@@ -58,11 +120,9 @@ class RestEntity(Entity):
             await self._coordinator.async_request_refresh()
             return
 
-        if self._resource_template is not None:
-            self.rest.set_url(self._resource_template.async_render(parse_result=False))
         await self.rest.async_update()
-        self._update_from_rest_data()
+        self.update_from_rest_data()
 
     @abstractmethod
-    def _update_from_rest_data(self) -> None:
+    def update_from_rest_data(self) -> None:
         """Update state from the rest data."""
