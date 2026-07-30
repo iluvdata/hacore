@@ -14,15 +14,12 @@ from homeassistant.components.rest.const import (
     DEFAULT_METHOD,
     DEFAULT_SSL_CIPHER_LIST,
 )
-from homeassistant.config_entries import ConfigSubentryData
 from homeassistant.const import (
     CONF_AUTHENTICATION,
     CONF_METHOD,
     CONF_RESOURCE,
-    CONF_VALUE_TEMPLATE,
     CONF_VERIFY_SSL,
     HTTP_BASIC_AUTHENTICATION,
-    Platform,
 )
 from homeassistant.core import HomeAssistant
 
@@ -51,30 +48,15 @@ def get_config_entry_data() -> dict[str, Any]:
     }
 
 
-@pytest.fixture
-def get_subentry_data() -> list[ConfigSubentryData]:
-    """Default subentry data."""
-    return [
-        ConfigSubentryData(
-            data={CONF_VALUE_TEMPLATE: '{{ value_json["key"] == "on"}}'},
-            subentry_type=Platform.BINARY_SENSOR,
-            title="binary sensor",
-            unique_id=f"{Platform.BINARY_SENSOR}_1",
-        )
-    ]
-
-
 async def async_setup_entry(
     hass: HomeAssistant,
     data: dict[str, Any],
-    subentries_data: list[ConfigSubentryData] | None = None,
 ) -> MockConfigEntry:
     """Set up a config entry for the REST component."""
 
     config_entry = MockConfigEntry(
         domain=DOMAIN,
         data=data,
-        subentries_data=subentries_data,
     )
     config_entry.add_to_hass(hass)
 
@@ -88,8 +70,7 @@ async def async_setup_complete_entry(
     hass: HomeAssistant,
     aioclient_mock: AiohttpClientMocker,
     get_config_entry_data: dict[str, Any],
-    get_subentry_data: list[ConfigSubentryData],
 ) -> MockConfigEntry:
     """Get the default entry WITH default subentry data."""
     aioclient_mock.get("http://localhost", status=HTTPStatus.OK, json={"key": "on"})
-    return await async_setup_entry(hass, get_config_entry_data, get_subentry_data)
+    return await async_setup_entry(hass, get_config_entry_data)

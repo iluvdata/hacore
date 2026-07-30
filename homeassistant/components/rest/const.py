@@ -1,6 +1,5 @@
 """The rest component constants."""
 
-from homeassistant.const import Platform
 from homeassistant.util.ssl import SSLCipherList
 
 DOMAIN = "rest"
@@ -19,14 +18,11 @@ DOCS_URL_AVAILABILTY = (
 )
 
 CONF_ENCODING = "encoding"
-CONF_INITIAL_SUBENTRY_TYPE = "initial_subentry_type"
 CONF_JSON_ATTRS = "json_attributes"
 CONF_JSON_ATTRS_PATH = "json_attributes_path"
 CONF_PAYLOAD_TEMPLATE = "payload_template"
 CONF_SSL_CIPHER_LIST = "ssl_cipher_list"
 CONF_SSL_SECTION = "ssl_section"
-
-OPTION_NONE = "z_none"  # sort last
 
 REST_IDX = "rest_idx"
 PLATFORM_IDX = "platform_idx"
@@ -44,5 +40,3 @@ XML_MIME_TYPES = (
     "application/xml",
     "text/xml",
 )
-
-CONFIG_ENTRY_PLATFORMS = [Platform.BINARY_SENSOR]

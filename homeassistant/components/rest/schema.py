@@ -8,7 +8,6 @@ import voluptuous as vol
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASSES_SCHEMA as BINARY_SENSOR_DEVICE_CLASSES_SCHEMA,
     DOMAIN as BINARY_SENSOR_DOMAIN,
-    BinarySensorDeviceClass,
 )
 from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.const import (
@@ -16,9 +15,7 @@ from homeassistant.const import (
     CONF_DEVICE_CLASS,
     CONF_FORCE_UPDATE,
     CONF_HEADERS,
-    CONF_ICON,
     CONF_METHOD,
-    CONF_NAME,
     CONF_PARAMS,
     CONF_PASSWORD,
     CONF_PAYLOAD,
@@ -34,11 +31,9 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.data_entry_flow import SectionConfig, section
-from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv, selector
 from homeassistant.helpers.trigger_template_entity import (
     CONF_AVAILABILITY,
-    CONF_PICTURE,
     TEMPLATE_ENTITY_BASE_SCHEMA,
     TEMPLATE_SENSOR_BASE_SCHEMA,
     ValueTemplate,
@@ -47,13 +42,11 @@ from homeassistant.util.ssl import SSLCipherList
 
 from .const import (
     CONF_ENCODING,
-    CONF_INITIAL_SUBENTRY_TYPE,
     CONF_JSON_ATTRS,
     CONF_JSON_ATTRS_PATH,
     CONF_PAYLOAD_TEMPLATE,
     CONF_SSL_CIPHER_LIST,
     CONF_SSL_SECTION,
-    CONFIG_ENTRY_PLATFORMS,
     DEFAULT_ENCODING,
     DEFAULT_FORCE_UPDATE,
     DEFAULT_METHOD,
@@ -61,7 +54,6 @@ from .const import (
     DEFAULT_VERIFY_SSL,
     DOMAIN,
     METHODS,
-    OPTION_NONE,
 )
 from .data import DEFAULT_TIMEOUT
 
@@ -141,10 +133,7 @@ class _TemplateURLSelector(selector.TemplateSelector):
     def __call__(self, data: Any) -> str:
         """Validate the passed selection."""
         template = cv.template(data)
-        try:
-            cv.url(template.async_render())
-        except TemplateError as ex:
-            raise vol.Invalid(f"template render error: {ex!s}") from ex
+        cv.url(template.async_render())
         return template.template
 
 
@@ -274,45 +263,3 @@ def RESOURCE_FLOW_SCHEMA(collapse_auth: bool = True) -> vol.Schema:
             vol.Optional(CONF_ENCODING, default=DEFAULT_ENCODING): _EncodingSelector(),
         }
     )
-
-
-CREATE_ENTRY_SCHEMA = vol.Schema(
-    {
-        vol.Required(
-            CONF_INITIAL_SUBENTRY_TYPE, default=OPTION_NONE
-        ): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[*CONFIG_ENTRY_PLATFORMS, OPTION_NONE],
-                sort=True,
-                translation_key="entity_platforms",
-            )
-        )
-    }
-)
-
-SUBENTRY_FLOW_SCHEMA = vol.Schema(
-    {
-        vol.Optional(CONF_NAME): selector.TemplateSelector(),
-        vol.Optional(CONF_ICON): selector.TemplateSelector(),
-        vol.Optional(CONF_PICTURE): selector.TemplateSelector(),
-        vol.Optional(CONF_VALUE_TEMPLATE): selector.TemplateSelector(),
-        vol.Optional(
-            CONF_FORCE_UPDATE, default=DEFAULT_FORCE_UPDATE
-        ): selector.BooleanSelector(),
-    }
-)
-
-_AVAILABILITY_SCHEMA = {vol.Optional(CONF_AVAILABILITY): selector.TemplateSelector()}
-
-BINARY_SENSOR_SUBENTRY_FLOW_SCHEMA = SUBENTRY_FLOW_SCHEMA.extend(
-    {
-        vol.Optional(CONF_DEVICE_CLASS): selector.SelectSelector(
-            selector.SelectSelectorConfig(
-                options=[cls.value for cls in BinarySensorDeviceClass],
-                mode=selector.SelectSelectorMode.DROPDOWN,
-                translation_key="binary_sensor_device_class",
-                sort=True,
-            ),
-        ),
-    }
-).extend(_AVAILABILITY_SCHEMA)

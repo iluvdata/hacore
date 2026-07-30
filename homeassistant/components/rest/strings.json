@@ -29,11 +29,6 @@
       "user": "Add RESTful Resource"
     },
     "step": {
-      "create_entry": {
-        "data": {
-          "initial_subentry_type": "Select entity type to create"
-        }
-      },
       "user": {
         "data": {
           "encoding": "Encoding",
@@ -76,51 +71,6 @@
       }
     }
   },
-  "config_subentries": {
-    "binary_sensor": {
-      "abort": {
-        "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
-      },
-      "entry_type": "Binary Sensor",
-      "initiate_flow": {
-        "user": "Add Binary Sensor"
-      },
-      "step": {
-        "user": {
-          "data": {
-            "availability": "[%key:component::rest::common::availability%]",
-            "device_class": "[%key:component::rest::common::device_class%]",
-            "force_update": "[%key:component::rest::common::force_update%]",
-            "icon": "[%key:component::rest::common::icon%]",
-            "name": "[%key:common::config_flow::data::name%]",
-            "picture": "[%key:component::rest::common::picture%]",
-            "value_template": "[%key:component::rest::common::value_template%]"
-          },
-          "data_description": {
-            "availability": "[%key:component::rest::common::availability_description%]",
-            "force_update": "[%key:component::rest::common::force_update_description%]",
-            "icon": "[%key:component::rest::common::icon_description%]",
-            "name": "Name of the RESTful binary sensor, supports templates.",
-            "picture": "[%key:component::rest::common::picture_description%]",
-            "value_template": "[%key:component::rest::common::value_template_description%]"
-          },
-          "description": "Configure a binary sensor using the `{entry_title}` resource",
-          "sections": {
-            "availability": {
-              "data": {
-                "availability": "[%key:component::rest::common::availability%]"
-              },
-              "data_description": {
-                "availability": "[%key:component::rest::common::availability_description%]"
-              },
-              "name": "[%key:component::rest::common::availability_section%]"
-            }
-          },
-          "title": "RESTful Binary Sensor"
-        }
-      }
-    }
-  },
   "exceptions": {
     "endpoint_error": {
       "message": "Error communicating with resource: {error_message}"
@@ -140,44 +90,6 @@
       "options": {
         "basic": "Basic",
         "digest": "Digest"
-      }
-    },
-    "binary_sensor_device_class": {
-      "options": {
-        "battery": "[%key:component::binary_sensor::entity_component::battery::name%]",
-        "battery_charging": "[%key:component::binary_sensor::entity_component::battery_charging::name%]",
-        "carbon_monoxide": "[%key:component::binary_sensor::entity_component::carbon_monoxide::name%]",
-        "cold": "[%key:component::binary_sensor::entity_component::cold::name%]",
-        "connectivity": "[%key:component::binary_sensor::entity_component::connectivity::name%]",
-        "door": "[%key:component::binary_sensor::entity_component::door::name%]",
-        "garage_door": "[%key:component::binary_sensor::entity_component::garage_door::name%]",
-        "gas": "[%key:component::binary_sensor::entity_component::gas::name%]",
-        "heat": "[%key:component::binary_sensor::entity_component::heat::name%]",
-        "light": "[%key:component::binary_sensor::entity_component::light::name%]",
-        "lock": "[%key:component::binary_sensor::entity_component::lock::name%]",
-        "moisture": "[%key:component::binary_sensor::entity_component::moisture::name%]",
-        "motion": "[%key:component::binary_sensor::entity_component::motion::name%]",
-        "moving": "[%key:component::binary_sensor::entity_component::moving::name%]",
-        "occupancy": "[%key:component::binary_sensor::entity_component::occupancy::name%]",
-        "opening": "[%key:component::binary_sensor::entity_component::opening::name%]",
-        "plug": "[%key:component::binary_sensor::entity_component::plug::name%]",
-        "power": "[%key:component::binary_sensor::entity_component::power::name%]",
-        "presence": "[%key:component::binary_sensor::entity_component::presence::name%]",
-        "problem": "[%key:component::binary_sensor::entity_component::problem::name%]",
-        "running": "[%key:component::binary_sensor::entity_component::running::name%]",
-        "safety": "[%key:component::binary_sensor::entity_component::safety::name%]",
-        "smoke": "[%key:component::binary_sensor::entity_component::smoke::name%]",
-        "sound": "[%key:component::binary_sensor::entity_component::sound::name%]",
-        "tamper": "[%key:component::binary_sensor::entity_component::tamper::name%]",
-        "update": "[%key:component::binary_sensor::entity_component::update::name%]",
-        "vibration": "[%key:component::binary_sensor::entity_component::vibration::name%]",
-        "window": "[%key:component::binary_sensor::entity_component::window::name%]"
-      }
-    },
-    "entity_platforms": {
-      "options": {
-        "binary_sensor": "[%key:component::binary_sensor::title%]",
-        "z_none": "None, create RESTful resource only"
       }
     },
     "headers": {

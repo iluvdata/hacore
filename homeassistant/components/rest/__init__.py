@@ -49,7 +49,6 @@ from .const import (
     CONF_PAYLOAD_TEMPLATE,
     CONF_SSL_CIPHER_LIST,
     CONF_SSL_SECTION,
-    CONFIG_ENTRY_PLATFORMS,
     COORDINATOR,
     DEFAULT_SSL_CIPHER_LIST,
     DOMAIN,
@@ -146,10 +145,6 @@ async def async_setup_entry(hass: HomeAssistant, config_entry: RestConfigEntry) 
 
     config_entry.runtime_data = RestRuntimeData(coordinator, rest)
 
-    await hass.config_entries.async_forward_entry_setups(
-        config_entry, CONFIG_ENTRY_PLATFORMS
-    )
-
     config_entry.async_on_unload(config_entry.add_update_listener(_async_entry_updated))
 
     return True
@@ -163,12 +158,8 @@ async def _async_entry_updated(
 
 async def async_unload_entry(hass: HomeAssistant, entry: RestConfigEntry) -> bool:
     """Unload a config entry."""
-    unloaded = await hass.config_entries.async_unload_platforms(
-        entry, CONFIG_ENTRY_PLATFORMS
-    )
-    if unloaded:
-        await entry.runtime_data.coordinator.async_shutdown()
-    return unloaded
+    await entry.runtime_data.coordinator.async_shutdown()
+    return True
 
 
 async def _async_process_config(hass: HomeAssistant, config: ConfigType) -> bool:
