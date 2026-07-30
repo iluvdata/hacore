@@ -12,11 +12,6 @@ DEFAULT_ENCODING = "UTF-8"
 DEFAULT_BINARY_SENSOR_NAME = "REST Binary Sensor"
 DEFAULT_SENSOR_NAME = "REST Sensor"
 
-DOCS_URL_TEMPLATE_DATA_PROCESSING = "https://www.home-assistant.io/docs/templating/where-to-use/#processing-incoming-data"
-DOCS_URL_AVAILABILTY = (
-    "https://www.home-assistant.io/integrations/template/#availability"
-)
-
 CONF_ENCODING = "encoding"
 CONF_JSON_ATTRS = "json_attributes"
 CONF_JSON_ATTRS_PATH = "json_attributes_path"

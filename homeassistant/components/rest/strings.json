@@ -1,18 +1,4 @@
 {
-  "common": {
-    "availability": "Availability Template",
-    "availability_description": "Defines a template to get the `available` state of the entity, see [Template integration documentation]({docs_url_availability}). If omitted will default to `available` if the last resource update was successful.",
-    "availability_section": "Availability Options",
-    "device_class": "Device Class",
-    "force_update": "Force Update",
-    "force_update_description": "If enabled, state changes will be reported even if the value is the same as the previous value.",
-    "icon": "Icon",
-    "icon_description": "Defines a template for the icon of the entity.",
-    "picture": "Picture",
-    "picture_description": "Defines a template for the picture of the entity.",
-    "value_template": "Template",
-    "value_template_description": "Defines a [template]({docs_url_template_data_processing}) to extract the value. `value` or `value_json` can be used."
-  },
   "config": {
     "abort": {
       "reconfigure_successful": "[%key:common::config_flow::abort::reconfigure_successful%]"
