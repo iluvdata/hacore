@@ -572,10 +572,23 @@ _CLASS_MATCH: dict[str, list[ClassTypeHintMatch]] = {
             ],
         ),
     ],
-    "repairs": [
+    Module.REPAIRS: [
         ClassTypeHintMatch(
             base_class="RepairsFlow",
             matches=[
+                TypeHintMatch(
+                    function_name="async_step_init",
+                    arg_types={
+                        1: [
+                            "dict[str, str] | None",
+                            "dict[str, Any] | None",
+                            "Mapping[str, str] | None",
+                            "Mapping[str, Any] | None",
+                        ]
+                    },
+                    return_type="RepairsFlowResult",
+                    mandatory=True,
+                ),
                 TypeHintMatch(
                     function_name="async_step_*",
                     arg_types={},

@@ -1,5 +1,6 @@
 """Data types for type hint pattern matching."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -18,9 +19,9 @@ class TypeHintMatch:
 
     function_name: str
     return_type: list[str | _Special | None] | str | _Special | None
-    arg_types: dict[int, str] | None = None
+    arg_types: dict[int, str | Iterable[str]] | None = None
     """arg_types is for positional arguments"""
-    named_arg_types: dict[str, str] | None = None
+    named_arg_types: dict[str, str | Iterable[str]] | None = None
     """named_arg_types is for named or keyword arguments"""
     kwargs_type: str | None = None
     """kwargs_type is for the special case `**kwargs`"""
